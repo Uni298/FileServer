@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>File Server</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px;
+    }
+    h1 { color: #fff; }
+    form {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      background: #222;
+    }
+    input, button {
+      margin: 5px;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+    }
+    input[type="file"], input[type="text"] {
+      background: #333;
+      color: #eee;
+    }
+    button {
+      background: #555;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #777;
+    }
+  </style>
+</head>
+<body>
+  <h1>File Server</h1>
+
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <form action="/download" method="get" onsubmit="event.preventDefault(); window.location='/download/'+this.id.value;">
+    <input type="text" name="id" placeholder="Enter ID" required>
+    <button type="submit">Download</button>
+  </form>
+</body>
+</html>
