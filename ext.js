@@ -141,7 +141,7 @@ studyNotesAPI.registerPanel("linegraph-insert-panel", ({ onClose, insertAtCursor
     font-family: 'Noto Sans JP', monospace, sans-serif;
     padding: 16px;
     width: 380px;
-    background: #ffffff;
+    background: #1a1d27;
     color: #cdd6f4;
     border-radius: 8px;
     box-sizing: border-box;
