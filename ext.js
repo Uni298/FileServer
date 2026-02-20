@@ -58,7 +58,7 @@ function renderGraph(raw, title) {
   const toX = i => padLeft + (i / (maxLen - 1 || 1)) * graphW;
   const toY = v => padTop + (1 - (v - yMin) / yRange) * graphH;
 
-  const colors = ['#4f8ef7', '#f7674f', '#4fcf8e', '#f7c44f', '#bf4ff7'];
+  const colors = ['#4a90d9', '#e05c5c', '#4dab7e', '#e0884a', '#8b6dd4'];
   const fmt = n => parseFloat(n.toPrecision(4)).toString();
 
   // Y軸メモリ
@@ -74,30 +74,30 @@ function renderGraph(raw, title) {
   for (let i = 0; i < maxLen; i += xTickStep) xTicks.push(i);
   if (xTicks[xTicks.length - 1] !== maxLen - 1) xTicks.push(maxLen - 1);
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="background:#1a1d27;border-radius:8px;font-family:monospace;display:block">`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="background:#ffffff;border:1px solid #e0e0e0;border-radius:6px;font-family:monospace;display:block">`;
 
   // タイトル
   if (title) {
-    svg += `<text x="${W / 2}" y="18" fill="#cdd6f4" font-size="11" text-anchor="middle" font-weight="bold">${escapeXml(title)}</text>`;
+    svg += `<text x="${W / 2}" y="18" fill="#1a1917" font-size="11" text-anchor="middle" font-weight="bold">${escapeXml(title)}</text>`;
   }
 
   // グリッド線 (Y)
   for (const v of yTicks) {
     const y = toY(v).toFixed(1);
-    svg += `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#2e3347" stroke-width="1"/>`;
-    svg += `<text x="${padLeft - 4}" y="${y}" fill="#8892a4" font-size="9" text-anchor="end" dominant-baseline="middle">${fmt(v)}</text>`;
+    svg += `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#e8e8e8" stroke-width="1"/>`;
+    svg += `<text x="${padLeft - 4}" y="${y}" fill="#888" font-size="9" text-anchor="end" dominant-baseline="middle">${fmt(v)}</text>`;
   }
 
   // グリッド線 (X)
   for (const i of xTicks) {
     const x = toX(i).toFixed(1);
-    svg += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${H - padBottom}" stroke="#2e3347" stroke-width="1"/>`;
-    svg += `<text x="${x}" y="${H - padBottom + 12}" fill="#8892a4" font-size="9" text-anchor="middle">${i}</text>`;
+    svg += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${H - padBottom}" stroke="#e8e8e8" stroke-width="1"/>`;
+    svg += `<text x="${x}" y="${H - padBottom + 12}" fill="#888" font-size="9" text-anchor="middle">${i}</text>`;
   }
 
   // 軸線
-  svg += `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#4a5068" stroke-width="1.5"/>`;
-  svg += `<line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#4a5068" stroke-width="1.5"/>`;
+  svg += `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#ccc" stroke-width="1.5"/>`;
+  svg += `<line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#ccc" stroke-width="1.5"/>`;
 
   // 各系列
   allSeries.forEach((vals, si) => {
@@ -111,7 +111,7 @@ function renderGraph(raw, title) {
 
     vals.forEach((v, i) => {
       const x = toX(i).toFixed(1), y = toY(v).toFixed(1);
-      svg += `<circle cx="${x}" cy="${y}" r="3" fill="${color}" stroke="#1a1d27" stroke-width="1.5"/>`;
+      svg += `<circle cx="${x}" cy="${y}" r="3" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>`;
     });
   });
 
