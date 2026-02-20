@@ -78,7 +78,7 @@ function renderGraph(raw, title) {
 
   // タイトル
   if (title) {
-    svg += `<text x="${W / 2}" y="18" fill="#1a1917" font-size="11" text-anchor="middle" font-weight="bold">${escapeXml(title)}</text>`;
+    svg += `<text x="${W / 2}" y="18" fill="#ffffff" font-size="11" text-anchor="middle" font-weight="bold">${escapeXml(title)}</text>`;
   }
 
   // グリッド線 (Y)
