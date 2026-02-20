@@ -138,47 +138,46 @@ studyNotesAPI.registerButton({
 studyNotesAPI.registerPanel("linegraph-insert-panel", ({ onClose, insertAtCursor }) => {
   const el = document.createElement('div');
   el.style.cssText = `
-    font-family: 'Noto Sans JP', monospace, sans-serif;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
     padding: 16px;
-    width: 380px;
-    background: #1a1d27;
-    color: #cdd6f4;
-    border-radius: 8px;
+    width: 360px;
+    background: #ffffff;
+    color: #1a1917;
     box-sizing: border-box;
   `;
 
   el.innerHTML = `
-    <h3 style="margin:0 0 14px;font-size:15px;color:#cdd6f4;display:flex;align-items:center;gap:8px">
+    <h3 style="margin:0 0 14px;font-size:14px;font-weight:600;color:#1a1917;display:flex;align-items:center;gap:6px">
       📈 <span>折れ線グラフ挿入</span>
     </h3>
 
-    <label style="font-size:11px;color:#8892a4;display:block;margin-bottom:4px">
+    <label style="font-size:11px;color:#666;display:block;margin-bottom:4px">
       データ（系列は : で区切る、値は , で区切る）
     </label>
     <input id="lg-data" type="text" placeholder="例: 1,3,2,5,4  または  1,2,3:4,3,2"
-      style="width:100%;box-sizing:border-box;padding:8px;background:#2e3347;border:1px solid #3e4560;border-radius:5px;color:#cdd6f4;font-size:13px;outline:none;font-family:monospace">
+      style="width:100%;box-sizing:border-box;padding:6px 8px;background:#fff;border:1px solid #d0d0d0;border-radius:4px;color:#1a1917;font-size:12px;outline:none;font-family:monospace">
 
-    <label style="font-size:11px;color:#8892a4;display:block;margin:10px 0 4px">
+    <label style="font-size:11px;color:#666;display:block;margin:10px 0 4px">
       タイトル（省略可）
     </label>
     <input id="lg-title" type="text" placeholder="例: 気温の推移"
-      style="width:100%;box-sizing:border-box;padding:8px;background:#2e3347;border:1px solid #3e4560;border-radius:5px;color:#cdd6f4;font-size:13px;outline:none">
+      style="width:100%;box-sizing:border-box;padding:6px 8px;background:#fff;border:1px solid #d0d0d0;border-radius:4px;color:#1a1917;font-size:12px;outline:none">
 
-    <div style="margin:12px 0 8px;font-size:11px;color:#8892a4">プレビュー</div>
-    <div id="lg-preview" style="min-height:80px;display:flex;align-items:center;justify-content:center;background:#12141e;border-radius:6px;padding:8px;overflow:hidden">
-      <span style="color:#4a5068;font-size:12px">データを入力するとプレビューが表示されます</span>
+    <div style="margin:12px 0 6px;font-size:11px;color:#666">プレビュー</div>
+    <div id="lg-preview" style="min-height:80px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:8px;overflow:hidden">
+      <span style="color:#aaa;font-size:12px">データを入力するとプレビューが表示されます</span>
     </div>
 
-    <div style="margin-top:14px;font-size:11px;color:#4a5068">
-      例: <code style="color:#8892a4">1,3,2,5,4</code> &nbsp;|&nbsp;
-      複数系列: <code style="color:#8892a4">1,2,3:4,3,2</code>
+    <div style="margin-top:10px;font-size:11px;color:#aaa">
+      例: <code style="color:#555;background:#f0f0f0;padding:1px 4px;border-radius:3px">1,3,2,5,4</code> &nbsp;|&nbsp;
+      複数系列: <code style="color:#555;background:#f0f0f0;padding:1px 4px;border-radius:3px">1,2,3:4,3,2</code>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button id="lg-insert" style="flex:1;padding:9px;background:#4f8ef7;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold">
+      <button id="lg-insert" style="flex:1;padding:7px;background:#4a90d9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">
         挿入
       </button>
-      <button id="lg-cancel" style="flex:1;padding:9px;background:#2e3347;color:#cdd6f4;border:1px solid #3e4560;border-radius:5px;cursor:pointer;font-size:13px">
+      <button id="lg-cancel" style="flex:1;padding:7px;background:#fff;color:#444;border:1px solid #d0d0d0;border-radius:4px;cursor:pointer;font-size:13px">
         キャンセル
       </button>
     </div>
@@ -191,13 +190,13 @@ studyNotesAPI.registerPanel("linegraph-insert-panel", ({ onClose, insertAtCursor
   function updatePreview() {
     const raw = dataInput.value.trim();
     if (!raw) {
-      preview.innerHTML = `<span style="color:#4a5068;font-size:12px">データを入力するとプレビューが表示されます</span>`;
+      preview.innerHTML = `<span style="color:#aaa;font-size:12px">データを入力するとプレビューが表示されます</span>`;
       return;
     }
     // 簡易バリデーション
     const valid = raw.split(':').every(s => s.split(',').every(v => !isNaN(parseFloat(v.trim()))));
     if (!valid) {
-      preview.innerHTML = `<span style="color:#f7674f;font-size:12px">⚠ 数値を , で区切って入力してください</span>`;
+      preview.innerHTML = `<span style="color:#e05c5c;font-size:12px">⚠ 数値を , で区切って入力してください</span>`;
       return;
     }
     preview.innerHTML = renderGraph(raw, titleInput.value.trim() || null);
