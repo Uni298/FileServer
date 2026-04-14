@@ -1,225 +1,36 @@
-/**
- * LineGraph Extension for StudyNotes
- * version: 2.0
- *
- * 記法:
- *   @graph[1,3,2,5,4]              — 単一系列
- *   @graph[1,2,3:4,3,2]            — 複数系列（: で区切り）
- *   @graph[1,2,3:4,3,2]{タイトル}  — タイトル付き
- *
- * ツールバーボタン:
- *   📈 グラフ — 挿入パネルを開く（プレビュー付き）
- */
-
 module.exports = {
-  name: "LineGraph",
-  version: "2.0",
-  description: "@graph[1,3,2,5,4] または @graph[A系列:B系列] で折れ線グラフを描画",
-
+  name: "BarChart",
+  version: "1.0",
+  description: "@bar[1,3,2,5,4] で棒グラフ",
   transform(text) {
-    return text.replace(/@graph\[([^\]]+)\](?:\{([^}]*)\})?/g, (_, raw, title) => {
-      return renderGraph(raw, title || null);
+    return text.replace(/@bar\[([^\]]+)\]/g, (_, raw) => {
+      const vals = raw.split(',').map(Number);
+      const W = 200, H = 80, pad = 10;
+
+      const max = Math.max(...vals);
+      // 棒グラフの場合、基本は0を基準にするためminは0か最小値の小さい方をとる
+      const min = Math.min(0, ...vals);
+      const range = max - min || 1;
+
+      // 棒の幅と間隔の計算
+      const chartWidth = W - (pad * 2);
+      const barGap = 4;
+      const barWidth = (chartWidth / vals.length) - barGap;
+
+      const bars = vals.map((v, i) => {
+        const x = pad + i * (barWidth + barGap);
+        // 値に基づいた高さの計算
+        const barHeight = ((v - min) / range) * (H - pad * 2);
+        const y = H - pad - barHeight;
+
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" fill="#4a90d9" rx="2" />`;
+      }).join('');
+
+      return `<svg width="${W}" height="${H}" style="vertical-align:middle; display:inline-block;">` +
+        // 0の基準線（任意で追加）
+        `<line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="#ccc" stroke-width="1"/>` +
+        bars +
+        `</svg>`;
     });
   }
 };
-
-// =====================
-//  グラフ描画コア
-// =====================
-function renderGraph(raw, title) {
-  const seriesRaw = raw.split(':');
-  const allSeries = seriesRaw.map(s => s.split(',').map(Number).filter(n => !isNaN(n)));
-  if (allSeries.every(s => s.length === 0)) return '';
-
-  const W = 340, H = title ? 220 : 200;
-  const padLeft = 45, padRight = 15, padTop = title ? 30 : 15, padBottom = 35;
-  const graphW = W - padLeft - padRight;
-  const graphH = H - padTop - padBottom;
-
-  const allVals = allSeries.flat();
-  const dataMax = Math.max(...allVals);
-  const dataMin = Math.min(...allVals);
-
-  function niceScale(min, max, targetTicks = 5) {
-    const range = max - min || 1;
-    const roughStep = range / targetTicks;
-    const mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
-    const candidates = [1, 2, 2.5, 5, 10];
-    const step = candidates.map(c => c * mag).find(s => s >= roughStep) || mag * 10;
-    const niceMin = Math.floor(min / step) * step;
-    const niceMax = Math.ceil(max / step) * step;
-    return { step, niceMin, niceMax };
-  }
-
-  const { step: yStep, niceMin: yMin, niceMax: yMax } = niceScale(dataMin, dataMax, 5);
-  const yRange = yMax - yMin;
-  const maxLen = Math.max(...allSeries.map(s => s.length));
-
-  const toX = i => padLeft + (i / (maxLen - 1 || 1)) * graphW;
-  const toY = v => padTop + (1 - (v - yMin) / yRange) * graphH;
-
-  const colors = ['#4a90d9', '#e05c5c', '#4dab7e', '#e0884a', '#8b6dd4'];
-  const fmt = n => parseFloat(n.toPrecision(4)).toString();
-
-  // Y軸メモリ
-  const yTicks = [];
-  for (let v = yMin; v <= yMax + yStep * 0.01; v = Math.round((v + yStep) * 1e10) / 1e10) {
-    if (v < yMin - yStep * 0.01 || v > yMax + yStep * 0.01) continue;
-    yTicks.push(v);
-  }
-
-  // X軸メモリ（データ点数に応じて間引き）
-  const xTickStep = Math.max(1, Math.ceil((maxLen - 1) / 6));
-  const xTicks = [];
-  for (let i = 0; i < maxLen; i += xTickStep) xTicks.push(i);
-  if (xTicks[xTicks.length - 1] !== maxLen - 1) xTicks.push(maxLen - 1);
-
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="background:#ffffff;border:1px solid #e0e0e0;border-radius:6px;font-family:monospace;display:block">`;
-
-  // タイトル
-  if (title) {
-    svg += `<text x="${W / 2}" y="18" fill="#ffffff" font-size="11" text-anchor="middle" font-weight="bold">${escapeXml(title)}</text>`;
-  }
-
-  // グリッド線 (Y)
-  for (const v of yTicks) {
-    const y = toY(v).toFixed(1);
-    svg += `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#e8e8e8" stroke-width="1"/>`;
-    svg += `<text x="${padLeft - 4}" y="${y}" fill="#888" font-size="9" text-anchor="end" dominant-baseline="middle">${fmt(v)}</text>`;
-  }
-
-  // グリッド線 (X)
-  for (const i of xTicks) {
-    const x = toX(i).toFixed(1);
-    svg += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${H - padBottom}" stroke="#e8e8e8" stroke-width="1"/>`;
-    svg += `<text x="${x}" y="${H - padBottom + 12}" fill="#888" font-size="9" text-anchor="middle">${i}</text>`;
-  }
-
-  // 軸線
-  svg += `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#ccc" stroke-width="1.5"/>`;
-  svg += `<line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#ccc" stroke-width="1.5"/>`;
-
-  // 各系列
-  allSeries.forEach((vals, si) => {
-    if (vals.length === 0) return;
-    const color = colors[si % colors.length];
-    const pts = vals.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
-    const fillPts = `${toX(0).toFixed(1)},${(H - padBottom).toFixed(1)} ${pts} ${toX(vals.length - 1).toFixed(1)},${(H - padBottom).toFixed(1)}`;
-
-    svg += `<polygon points="${fillPts}" fill="${color}" fill-opacity="0.08"/>`;
-    svg += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-
-    vals.forEach((v, i) => {
-      const x = toX(i).toFixed(1), y = toY(v).toFixed(1);
-      svg += `<circle cx="${x}" cy="${y}" r="3" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>`;
-    });
-  });
-
-  svg += `</svg>`;
-  return svg;
-}
-
-function escapeXml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// =====================
-//  StudyNotes UI 拡張
-// =====================
-studyNotesAPI.registerButton({
-  icon: "📈",
-  label: "グラフ",
-  title: "折れ線グラフを挿入",
-  onClick({ openPanel }) {
-    openPanel("linegraph-insert-panel");
-  }
-});
-
-studyNotesAPI.registerPanel("linegraph-insert-panel", ({ onClose, insertAtCursor }) => {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    font-family: -apple-system, 'Helvetica Neue', sans-serif;
-    padding: 16px;
-    width: 360px;
-    background: #ffffff;
-    color: #1a1917;
-    box-sizing: border-box;
-  `;
-
-  el.innerHTML = `
-    <h3 style="margin:0 0 14px;font-size:14px;font-weight:600;color:#1a1917;display:flex;align-items:center;gap:6px">
-      📈 <span>折れ線グラフ挿入</span>
-    </h3>
-
-    <label style="font-size:11px;color:#666;display:block;margin-bottom:4px">
-      データ（系列は : で区切る、値は , で区切る）
-    </label>
-    <input id="lg-data" type="text" placeholder="例: 1,3,2,5,4  または  1,2,3:4,3,2"
-      style="width:100%;box-sizing:border-box;padding:6px 8px;background:#fff;border:1px solid #d0d0d0;border-radius:4px;color:#1a1917;font-size:12px;outline:none;font-family:monospace">
-
-    <label style="font-size:11px;color:#666;display:block;margin:10px 0 4px">
-      タイトル（省略可）
-    </label>
-    <input id="lg-title" type="text" placeholder="例: 気温の推移"
-      style="width:100%;box-sizing:border-box;padding:6px 8px;background:#fff;border:1px solid #d0d0d0;border-radius:4px;color:#1a1917;font-size:12px;outline:none">
-
-    <div style="margin:12px 0 6px;font-size:11px;color:#666">プレビュー</div>
-    <div id="lg-preview" style="min-height:80px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:8px;overflow:hidden">
-      <span style="color:#aaa;font-size:12px">データを入力するとプレビューが表示されます</span>
-    </div>
-
-    <div style="margin-top:10px;font-size:11px;color:#aaa">
-      例: <code style="color:#555;background:#f0f0f0;padding:1px 4px;border-radius:3px">1,3,2,5,4</code> &nbsp;|&nbsp;
-      複数系列: <code style="color:#555;background:#f0f0f0;padding:1px 4px;border-radius:3px">1,2,3:4,3,2</code>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button id="lg-insert" style="flex:1;padding:7px;background:#4a90d9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">
-        挿入
-      </button>
-      <button id="lg-cancel" style="flex:1;padding:7px;background:#fff;color:#444;border:1px solid #d0d0d0;border-radius:4px;cursor:pointer;font-size:13px">
-        キャンセル
-      </button>
-    </div>
-  `;
-
-  const dataInput = el.querySelector('#lg-data');
-  const titleInput = el.querySelector('#lg-title');
-  const preview = el.querySelector('#lg-preview');
-
-  function updatePreview() {
-    const raw = dataInput.value.trim();
-    if (!raw) {
-      preview.innerHTML = `<span style="color:#aaa;font-size:12px">データを入力するとプレビューが表示されます</span>`;
-      return;
-    }
-    // 簡易バリデーション
-    const valid = raw.split(':').every(s => s.split(',').every(v => !isNaN(parseFloat(v.trim()))));
-    if (!valid) {
-      preview.innerHTML = `<span style="color:#e05c5c;font-size:12px">⚠ 数値を , で区切って入力してください</span>`;
-      return;
-    }
-    preview.innerHTML = renderGraph(raw, titleInput.value.trim() || null);
-  }
-
-  dataInput.addEventListener('input', updatePreview);
-  titleInput.addEventListener('input', updatePreview);
-
-  el.querySelector('#lg-insert').addEventListener('click', () => {
-    const raw = dataInput.value.trim();
-    if (!raw) return;
-    const t = titleInput.value.trim();
-    const syntax = t ? `@graph[${raw}]{${t}}` : `@graph[${raw}]`;
-    insertAtCursor(syntax);
-    onClose();
-  });
-
-  el.querySelector('#lg-cancel').addEventListener('click', onClose);
-
-  // Enterキーで挿入
-  dataInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') el.querySelector('#lg-insert').click();
-  });
-
-  return el;
-});
