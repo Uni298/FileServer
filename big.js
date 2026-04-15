@@ -1,44 +1,42 @@
 module.exports = {
-  name: "Smart Braces SVG",
-  version: "1.3.0",
-  description: "行数に合わせてSVGで描画される動的中括弧",
+  name: "Smart Braces SVG Fixed",
+  version: "1.4.0",
+  description: "行数に合わせて伸びる中括弧（修正版）",
 
   transform(text) {
     // 1. @q の置換
     let processedText = text.replace(/@q/g, '◎');
 
-    // 2. 可変長中括弧の置換 (SVG版)
-    const braceRegex = /([^@\n]+)@\{([\s\S]*?)@@/g;
+    // 2. 可変長中括弧の置換
+    // 改良: 前の文字がなくても動くように ([^@\n]*) に変更
+    const braceRegex = /([^@\n]*)@\{([\s\S]*?)@@/g;
 
     return processedText.replace(braceRegex, (match, label, content) => {
-      const lines = content.trim().split('\n');
+      // コンテンツの整形
+      const rawLines = content.split('\n');
+      // 空の行を除去しつつ、最低1行は確保
+      const lines = rawLines.map(l => l.trim()).filter(l => l !== "");
+      if (lines.length === 0) return match; // 中身が空ならそのまま返す
+
       const rowCount = lines.length;
-      
-      // 1行あたりの高さを 24px と仮定して全体の高さを計算
-      const lineHeight = 24;
+      const lineHeight = 26; // 1行あたりの高さ(px)
       const totalHeight = rowCount * lineHeight;
       
-      // SVGで中括弧を描画
-      // パスデータの "M" は開始点、"Q" はベジェ曲線（曲がり角）
+      // シンプルなSVGパス（中央に突起がある中括弧）
+      // 描画が消えないよう、viewBoxとpathを最適化
       const svgBrace = `
-        <svg width="20" height="${totalHeight}" viewBox="0 0 20 ${totalHeight}" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 5px;">
-          <path d="
-            M 15 0 
-            Q 5 0, 5 15 
-            L 5 ${(totalHeight / 2) - 15} 
-            Q 5 ${totalHeight / 2}, 0 ${totalHeight / 2} 
-            Q 5 ${totalHeight / 2}, 5 ${(totalHeight / 2) + 15} 
-            L 5 ${totalHeight - 15} 
-            Q 5 ${totalHeight}, 15 ${totalHeight}
-          " stroke="currentColor" stroke-width="1.5" />
+        <svg width="16" height="${totalHeight}" viewBox="0 0 16 ${totalHeight}" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 0 4px;">
+          <path d="M12,2 C6,2 4,8 4,15 L4,${(totalHeight/2)-10} Q4,${totalHeight/2} 0,${totalHeight/2} Q4,${totalHeight/2} 4,${(totalHeight/2)+10} L4,${totalHeight-15} C4,${totalHeight-8} 6,${totalHeight-2 12,${totalHeight-2" 
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         </svg>
       `;
 
+      // 1行の時と複数行の時でレイアウトを微調整
       return `
-        <div style="display: inline-flex; align-items: center; vertical-align: middle; margin: 8px 0;">
-          <div style="font-weight: bold; white-space: nowrap;">${label.trim()}</div>
+        <div style="display: inline-flex; align-items: center; vertical-align: middle; margin: 5px 0; min-height: ${totalHeight}px;">
+          <div style="font-weight: bold; white-space: nowrap; line-height: 1;">${label || ''}</div>
           ${svgBrace}
-          <div style="text-align: left; line-height: ${lineHeight}px; padding-left: 2px;">
+          <div style="text-align: left; line-height: ${lineHeight}px; padding-left: 2px; display: flex; flex-direction: column; justify-content: center;">
             ${lines.join('<br>')}
           </div>
         </div>
