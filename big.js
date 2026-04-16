@@ -1,61 +1,54 @@
-/**
- * StudyNotes Extension: SmartBraces & Symbols v1.6
- */
 module.exports = {
-  name: "Smart Braces & Symbols",
-  version: "1.6.0",
-  description: "@q(◎), @jr(↳), @{ (伸びる中括弧) を追加します。",
+  name: "CustomNotation",
+  version: "1.0.0",
+  description: "@q → ◎ / @jr → ↳ / @{...@@  → 大括弧（複数行対応）",
 
   transform(text) {
-    // 1. 記号の置換
-    let processedText = text
-      .replace(/@q/g, '◎')
-      .replace(/@jr/g, '↳'); // 新機能: @jr で ↳ を入力
+    // --- 1. @q → ◎ ---
+    text = text.replace(/@q/g, '◎');
 
-    // 2. 中括弧の解析
-    const braceRegex = /([^@\n]*)@\{([\s\S]*?)@@/g;
+    // --- 2. @jr → ↳ ---
+    text = text.replace(/@jr/g, '↳');
 
-    return processedText.replace(braceRegex, (match, label, content) => {
-      const rawLines = content.split('\n');
-      const lines = rawLines.map(l => l.trim()).filter(l => l !== "");
-      if (lines.length === 0) return match;
+    // --- 3. @{前文字}から@{後文字}に 大括弧（複数行対応）@@で終了 ---
+    // 書式: @{ラベル前}文字列（改行可）@@
+    // 出力: 左に大括弧 { が縦に伸び、右側テキスト、ラベルは中央に表示
+    text = text.replace(/@\{([^}]*)\}([\s\S]*?)@@/g, (match, label, inner) => {
+      const lines = inner.split('\n');
+      // 空行を除いてレンダリング
+      const filteredLines = lines.filter((l, i) => {
+        // 最初と最後の空行だけ除去
+        if (i === 0 && l.trim() === '') return false;
+        if (i === lines.length - 1 && l.trim() === '') return false;
+        return true;
+      });
+      if (filteredLines.length === 0) filteredLines.push(inner.trim());
 
-      const rowCount = lines.length;
-      const lineHeight = 28; // 行の高さを少し広めに設定
-      const totalHeight = rowCount * lineHeight;
-      
-      const mid = totalHeight / 2;
-      // 行数に関わらず崩れないように曲線のサイズを動的に計算
-      const curve = Math.min(12, totalHeight / 3); 
+      const rowCount = filteredLines.length;
+      const midIndex = Math.floor((rowCount - 1) / 2);
+      const lineHeight = 1.6; // em
+      const totalEm = rowCount * lineHeight;
 
-      // 確実に表示されるSVGパス
-      // M:開始, C:ベジェ曲線(角), L:直線, Q:ベジェ曲線(中央の突起)
-      const svgPath = `
-        M 12,2 
-        C 6,2 4,${curve} 4,${curve * 2} 
-        L 4,${mid - curve} 
-        Q 4,${mid} 0,${mid} 
-        Q 4,${mid} 4,${mid + curve} 
-        L 4,${totalHeight - (curve * 2)} 
-        C 4,${totalHeight - curve} 6,${totalHeight - 2} 12,${totalHeight - 2}
-      `.replace(/\s+/g, ' ');
+      // SVG で縦伸び括弧を描画
+      const svgH = totalEm;
+      // 括弧は縦長SVGで表現
+      const bracketSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="${svgH}em" style="vertical-align:middle;overflow:visible" viewBox="0 0 18 ${rowCount * 24}">
+        <path d="M14,2 Q4,2 4,${rowCount*12} Q4,${rowCount*24-2} 14,${rowCount*24-2}"
+              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>`;
 
-      // SVG自体が表示されない問題を防ぐため、色(stroke)を明示的に指定
-      const svgBrace = `
-        <svg width="16" height="${totalHeight}" viewBox="0 0 16 ${totalHeight}" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 0 6px;">
-          <path d="${svgPath}" stroke="#1a1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      `;
+      const rowsHtml = filteredLines.map((line, i) => {
+        const isMiddle = i === midIndex;
+        return `<div style="display:table-row">
+          <div style="display:table-cell;vertical-align:middle;padding:0 2px 0 0;line-height:${lineHeight}em">${isMiddle ? bracketSvg : ''}</div>
+          <div style="display:table-cell;vertical-align:middle;padding:0 6px;line-height:${lineHeight}em;white-space:pre">${line || '&nbsp;'}</div>
+          <div style="display:table-cell;vertical-align:middle;padding:0 2px;line-height:${lineHeight}em;color:#4a90d9;font-weight:bold">${isMiddle ? `<span style="font-size:0.9em">${label}</span>` : ''}</div>
+        </div>`;
+      }).join('');
 
-      return `
-        <div style="display: inline-flex; align-items: center; vertical-align: middle; margin: 12px 0; min-height: ${totalHeight}px; font-family: 'noto-serif', serif;">
-          <div style="font-weight: bold; white-space: nowrap; padding-right: 2px;">${label || ''}</div>
-          ${svgBrace}
-          <div style="text-align: left; line-height: ${lineHeight}px; display: flex; flex-direction: column; justify-content: center;">
-            ${lines.map(line => `<span style="display:block;">${line}</span>`).join('')}
-          </div>
-        </div>
-      `;
+      return `<span style="display:inline-table;border-collapse:collapse;vertical-align:middle">${rowsHtml}</span>`;
     });
+
+    return text;
   }
 };
