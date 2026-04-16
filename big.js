@@ -1,7 +1,7 @@
 module.exports = {
   name: "CustomNotation",
-  version: "1.0.0",
-  description: "@q → ◎ / @jr → ↳ / @{...@@  → 大括弧（複数行対応）",
+  version: "1.0.1",
+  description: "@q → ◎ / @jr → ↳ / @{ラベル}〜@@ → 縦伸び大括弧",
 
   transform(text) {
     // --- 1. @q → ◎ ---
@@ -10,43 +10,42 @@ module.exports = {
     // --- 2. @jr → ↳ ---
     text = text.replace(/@jr/g, '↳');
 
-    // --- 3. @{前文字}から@{後文字}に 大括弧（複数行対応）@@で終了 ---
-    // 書式: @{ラベル前}文字列（改行可）@@
-    // 出力: 左に大括弧 { が縦に伸び、右側テキスト、ラベルは中央に表示
+    // --- 3. @{ラベル}内容@@ → 縦伸び大括弧 ---
     text = text.replace(/@\{([^}]*)\}([\s\S]*?)@@/g, (match, label, inner) => {
-      const lines = inner.split('\n');
-      // 空行を除いてレンダリング
-      const filteredLines = lines.filter((l, i) => {
-        // 最初と最後の空行だけ除去
+      // 前後の空行を除去
+      const lines = inner.split('\n').filter((l, i, arr) => {
         if (i === 0 && l.trim() === '') return false;
-        if (i === lines.length - 1 && l.trim() === '') return false;
+        if (i === arr.length - 1 && l.trim() === '') return false;
         return true;
       });
-      if (filteredLines.length === 0) filteredLines.push(inner.trim());
+      if (lines.length === 0) lines.push(inner.trim());
 
-      const rowCount = filteredLines.length;
+      const rowCount = lines.length;
+      const lineH = 24; // px per row
+      const totalH = rowCount * lineH;
       const midIndex = Math.floor((rowCount - 1) / 2);
-      const lineHeight = 1.6; // em
-      const totalEm = rowCount * lineHeight;
+      const svgW = 16;
 
-      // SVG で縦伸び括弧を描画
-      const svgH = totalEm;
-      // 括弧は縦長SVGで表現
-      const bracketSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="${svgH}em" style="vertical-align:middle;overflow:visible" viewBox="0 0 18 ${rowCount * 24}">
-        <path d="M14,2 Q4,2 4,${rowCount*12} Q4,${rowCount*24-2} 14,${rowCount*24-2}"
-              fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      </svg>`;
+      // インラインSVGを文字列で組み立て（属性値にemを使わない）
+      const bracketPath = `M${svgW - 2},2 Q${svgW / 2},2 ${svgW / 2},${totalH / 2} Q${svgW / 2},${totalH - 2} ${svgW - 2},${totalH - 2}`;
+      const bracketSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${totalH}" viewBox="0 0 ${svgW} ${totalH}" style="display:block;overflow:visible"><path d="${bracketPath}" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-      const rowsHtml = filteredLines.map((line, i) => {
-        const isMiddle = i === midIndex;
-        return `<div style="display:table-row">
-          <div style="display:table-cell;vertical-align:middle;padding:0 2px 0 0;line-height:${lineHeight}em">${isMiddle ? bracketSvg : ''}</div>
-          <div style="display:table-cell;vertical-align:middle;padding:0 6px;line-height:${lineHeight}em;white-space:pre">${line || '&nbsp;'}</div>
-          <div style="display:table-cell;vertical-align:middle;padding:0 2px;line-height:${lineHeight}em;color:#4a90d9;font-weight:bold">${isMiddle ? `<span style="font-size:0.9em">${label}</span>` : ''}</div>
-        </div>`;
+      // rowspanを使ったテーブル構造:
+      // midIndex行: [bracket td rowspan=rowCount] [text td] [label td]
+      // 他の行:                                   [text td] [empty td]
+      const rows = lines.map((line, i) => {
+        const textTd = `<td style="height:${lineH}px;padding:0 10px 0 6px;white-space:pre;vertical-align:middle;font-size:1em">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;') || '&nbsp;'}</td>`;
+        if (i === midIndex) {
+          const bracketTd = `<td rowspan="${rowCount}" style="vertical-align:middle;padding:0;width:${svgW}px">${bracketSvg}</td>`;
+          const labelTd = `<td style="height:${lineH}px;padding:0 4px;vertical-align:middle;color:#4a90d9;font-weight:bold;white-space:nowrap;font-size:0.88em">${label || ''}</td>`;
+          return `<tr>${bracketTd}${textTd}${labelTd}</tr>`;
+        } else {
+          const emptyTd = `<td style="height:${lineH}px;padding:0;vertical-align:middle"></td>`;
+          return `<tr>${textTd}${emptyTd}</tr>`;
+        }
       }).join('');
 
-      return `<span style="display:inline-table;border-collapse:collapse;vertical-align:middle">${rowsHtml}</span>`;
+      return `<table style="display:inline-table;border-collapse:collapse;vertical-align:middle;line-height:1">${rows}</table>`;
     });
 
     return text;
